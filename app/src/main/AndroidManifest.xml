@@ -24,6 +24,7 @@
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
@@ -36,11 +37,14 @@
                 <data android:scheme="https" />
             </intent-filter>
         </activity>
-        <!-- The following service entries exist in order to allow us to
-             start more than one sandboxed process. -->
-
-        <!-- NOTE: If you change the values of "android:process" for any of the below services,
-             you also need to update kHelperProcessExecutableName in chrome_constants.cc. -->
+        <!--
+ The following service entries exist in order to allow us to
+             start more than one sandboxed process.
+        -->
+        <!--
+ NOTE: If you change the values of "android:process" for any of the below services,
+             you also need to update kHelperProcessExecutableName in chrome_constants.cc.
+        -->
         <meta-data
             android:name="org.chromium.content.browser.NUM_SANDBOXED_SERVICES"
             android:value="39" />
@@ -78,9 +82,10 @@
         <service
             android:name="org.chromium.content_shell_apk.ChildProcessLauncherTestHelperService"
             android:process=":ChildProcessLauncherHelper" />
-
-        <!-- The following entries are for ChildProcessLauncherTest. They should eventually be moved
-             to base. -->
+        <!--
+ The following entries are for ChildProcessLauncherTest. They should eventually be moved
+             to base.
+        -->
         <meta-data
             android:name="org.chromium.content.browser.NUM_TEST_SERVICES"
             android:value="2" />
@@ -95,7 +100,6 @@
             android:exported="false"
             android:isolatedProcess="true"
             android:process=":test_child_service_process1" />
-
     </application>
 
 </manifest>

@@ -5,11 +5,11 @@
 package com.gigaorder.webview3.content_shell_apk;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
-import android.text.TextUtils;
+import android.os.Handler;
 import android.util.Log;
-import android.widget.Toast;
+import android.webkit.WebView;
+import android.widget.Button;
 
 import com.gigaorder.webview3.R;
 
@@ -19,16 +19,8 @@ import org.chromium.base.PathUtils;
 import org.chromium.base.library_loader.LibraryLoader;
 import org.chromium.base.library_loader.LibraryProcessType;
 import org.chromium.base.library_loader.ProcessInitException;
-import org.chromium.content_public.browser.BrowserStartupController;
-import org.chromium.content_public.browser.WebContents;
-import org.chromium.content_shell.Shell;
-import org.chromium.content_shell.ShellManager;
-import org.chromium.ui.base.ActivityWindowAndroid;
-import org.chromium.ui.base.WindowAndroid;
 
 import java.lang.reflect.Method;
-
-//import org.chromium.base.CommandLine;
 
 /**
  * Activity for managing the Content Shell.
@@ -37,7 +29,7 @@ public class ContentShellActivity extends Activity {
 
     private static final String TAG = "ContentShellActivity";
 
-    private ShellManager mShellManager;
+    private ContentShellWebView csWebView;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -65,34 +57,26 @@ public class ContentShellActivity extends Activity {
         }
 
         setContentView(R.layout.content_shell_activity);
-        mShellManager = findViewById(R.id.shell_container);
-        mShellManager.setWindow(new ActivityWindowAndroid(this, false));
+        csWebView = findViewById(R.id.web_view_container);
+        csWebView.loadUrl("https://www.youtube.com/");
 
-
-        try {
-            BrowserStartupController.get(LibraryProcessType.PROCESS_BROWSER)
-                    .startBrowserProcessesAsync(
-                            true, false, new BrowserStartupController.StartupCallback() {
-                                @Override
-                                public void onSuccess() {
-                                    mShellManager.launchShell(ShellManager.DEFAULT_SHELL_URL);
-                                }
-
-                                @Override
-                                public void onFailure() {
-                                    finish();
-                                }
-                            });
-        } catch (ProcessInitException e) {
-            Log.e(TAG, "Unable to load native library.", e);
-            System.exit(-1);
-        }
+//        Button button = findViewById(R.id.test);
+//        button.setOnClickListener((v) -> {
+//            try {
+//                csWebView.evaluateJavaScript("(function() {return document.getElementsByTagName('body')[0].innerHTML;})();"
+//                        , s -> {
+//                            Log.d("abc", s);
+//                        });
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        });
     }
 
 
     @Override
     protected void onDestroy() {
-        if (mShellManager != null) mShellManager.destroy();
+//        if (csWebView != null) csWebView.destroy();
         super.onDestroy();
     }
 }
