@@ -117,6 +117,12 @@ public class ContentShellWebView extends FrameLayout {
                                         actionHandler.sendMessage(message);
                                     }
                                     actionQueueBeforeReady = null;
+
+                                    postDelayed(() -> {
+                                        shellManager.getActiveShell().getWebContents().evaluateJavaScript("(function () {return 20}) ()", s -> {
+                                            int a = 5;
+                                        });
+                                    }, 5000);
                                 }
 
                                 @Override
