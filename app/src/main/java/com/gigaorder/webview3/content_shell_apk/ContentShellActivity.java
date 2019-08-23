@@ -6,12 +6,12 @@ package com.gigaorder.webview3.content_shell_apk;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.webkit.JavascriptInterface;
 import android.widget.Button;
 
 import com.gigaorder.webview3.R;
 
 import org.chromium.base.ApplicationStatus;
-import org.chromium.content.browser.JavascriptInterface;
 
 import java.lang.reflect.Method;
 

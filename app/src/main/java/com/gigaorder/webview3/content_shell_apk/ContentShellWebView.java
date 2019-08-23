@@ -6,6 +6,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.widget.FrameLayout;
 
 import com.gigaorder.webview3.R;
@@ -16,7 +17,6 @@ import org.chromium.base.PathUtils;
 import org.chromium.base.library_loader.LibraryLoader;
 import org.chromium.base.library_loader.LibraryProcessType;
 import org.chromium.base.library_loader.ProcessInitException;
-import org.chromium.content.browser.JavascriptInterface;
 import org.chromium.content_public.browser.BrowserStartupController;
 import org.chromium.content_public.browser.JavaScriptCallback;
 import org.chromium.content_public.browser.JavascriptInjector;
