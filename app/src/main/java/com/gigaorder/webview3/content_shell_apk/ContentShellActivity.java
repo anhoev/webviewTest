@@ -6,19 +6,12 @@ package com.gigaorder.webview3.content_shell_apk;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Handler;
-import android.util.Log;
-import android.webkit.WebView;
+import android.webkit.JavascriptInterface;
 import android.widget.Button;
 
 import com.gigaorder.webview3.R;
 
 import org.chromium.base.ApplicationStatus;
-import org.chromium.base.ContextUtils;
-import org.chromium.base.PathUtils;
-import org.chromium.base.library_loader.LibraryLoader;
-import org.chromium.base.library_loader.LibraryProcessType;
-import org.chromium.base.library_loader.ProcessInitException;
 
 import java.lang.reflect.Method;
 
@@ -35,11 +28,9 @@ public class ContentShellActivity extends Activity {
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        ContextUtils.initApplicationContext(getApplication());
-        //test
-        PathUtils.setPrivateDataDirectorySuffix("content_shell");
-        ApplicationStatus.initialize(getApplication());
-
+        // onStateChange requires "this" - the activity - so it must be used inside the activity,
+        // passing the activity to the ContentShellWebView is possible but it will make the component
+        // less usable in different scenarios (used in other components which are not Activity)
         try {
             Method method = ApplicationStatus.class.getDeclaredMethod("onStateChange", Activity.class, int.class);
             method.setAccessible(true);
@@ -48,35 +39,23 @@ public class ContentShellActivity extends Activity {
             e.printStackTrace();
         }
 
-        try {
-            LibraryLoader.getInstance().ensureInitialized(LibraryProcessType.PROCESS_BROWSER);
-        } catch (ProcessInitException e) {
-            Log.e(TAG, "ContentView initialization failed.", e);
-            System.exit(-1);
-            return;
-        }
-
         setContentView(R.layout.content_shell_activity);
         csWebView = findViewById(R.id.web_view_container);
-        csWebView.loadUrl("https://www.youtube.com/");
+        csWebView.loadUrl("about:blank");
 
-//        Button button = findViewById(R.id.test);
-//        button.setOnClickListener((v) -> {
-//            try {
-//                csWebView.evaluateJavaScript("(function() {return document.getElementsByTagName('body')[0].innerHTML;})();"
-//                        , s -> {
-//                            Log.d("abc", s);
-//                        });
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-//        });
-    }
+        // Example for csWebView methods
+        Button button = findViewById(R.id.test);
+        button.setOnClickListener(v -> {
+            Object interfaceObj = new Object() {
+                @JavascriptInterface
+                public int test() {
+                    return Integer.MAX_VALUE;
+                }
+            };
+            String interfaceName = "testJsInterface";
 
-
-    @Override
-    protected void onDestroy() {
-//        if (csWebView != null) csWebView.destroy();
-        super.onDestroy();
+            csWebView.addJavascriptInterface(interfaceObj, interfaceName);
+            csWebView.loadUrl("javascript:testJsInterface.test()");
+        });
     }
 }
