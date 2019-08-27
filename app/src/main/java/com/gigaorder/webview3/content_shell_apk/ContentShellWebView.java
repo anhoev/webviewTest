@@ -7,6 +7,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 
 import com.gigaorder.webview3.R;
@@ -18,9 +20,9 @@ import org.chromium.base.library_loader.LibraryLoader;
 import org.chromium.base.library_loader.LibraryProcessType;
 import org.chromium.base.library_loader.ProcessInitException;
 import org.chromium.content_public.browser.BrowserStartupController;
-import org.chromium.content_public.browser.JavaScriptCallback;
 import org.chromium.content_public.browser.JavascriptInjector;
 import org.chromium.content_public.browser.WebContents;
+import org.chromium.content_public.browser.WebContentsObserver;
 import org.chromium.content_shell.ShellManager;
 import org.chromium.ui.base.ActivityWindowAndroid;
 
@@ -35,6 +37,8 @@ public class ContentShellWebView extends FrameLayout {
     private static boolean browserProcessStarted;
     private static final String TAG = "ContentShellWebView";
     private List<Action> actionQueueBeforeReady;
+    private WebViewClient webViewClient;
+    WebContentsObserver webContentsObserver;
 
     public ContentShellWebView(Context context) {
         super(context);
@@ -49,7 +53,6 @@ public class ContentShellWebView extends FrameLayout {
         initShellManagerView(context);
         startBrowserProcess();
     }
-
 
     private void initShellManager(Context context) {
         ContextUtils.initApplicationContext(context.getApplicationContext());
@@ -82,9 +85,9 @@ public class ContentShellWebView extends FrameLayout {
                 break;
             case Action.EVAL_JS:
                 String script = (String) parameterMap.get("script");
-                JavaScriptCallback callback = (JavaScriptCallback) parameterMap.get("callback");
+                ValueCallback<String> callback = (ValueCallback<String>) parameterMap.get("callback");
 
-                shellManager.getActiveShell().getWebContents().evaluateJavaScript(script, callback);
+                shellManager.getActiveShell().getWebContents().evaluateJavaScript(script, callback::onReceiveValue);
                 break;
             case Action.ADD_JS_INTERFACE:
                 Object interfaceObj = parameterMap.get("interfaceObj");
@@ -94,6 +97,17 @@ public class ContentShellWebView extends FrameLayout {
                 JavascriptInjector javascriptInjector = JavascriptInjector.fromWebContents(webContents);
 
                 javascriptInjector.addPossiblyUnsafeInterface(interfaceObj, interfaceName, JavascriptInterface.class);
+                break;
+            case Action.REMOVE_JS_INTERFACE:
+                interfaceName = (String) parameterMap.get("interfaceName");
+
+                webContents = shellManager.getActiveShell().getWebContents();
+                javascriptInjector = JavascriptInjector.fromWebContents(webContents);
+                javascriptInjector.removeInterface(interfaceName);
+                break;
+            case Action.SET_WEBVIEW_CLIENT:
+                this.webViewClient = (WebViewClient) parameterMap.get("webViewClient");
+                mapWebViewClientListeners(this.webViewClient);
                 break;
         }
     }
@@ -105,7 +119,7 @@ public class ContentShellWebView extends FrameLayout {
         createAction(Action.LOAD_URL, params);
     }
 
-    public void evaluateJavaScript(String script, JavaScriptCallback callback) {
+    public void evaluateJavascript(String script, ValueCallback<String> callback) {
         Map<String, Object> params = new HashMap<>();
         params.put("script", script);
         params.put("callback", callback);
@@ -119,6 +133,13 @@ public class ContentShellWebView extends FrameLayout {
         params.put("interfaceName", interfaceName);
 
         createAction(Action.ADD_JS_INTERFACE, params);
+    }
+
+    public void removeJavascriptInterface(String interfaceName) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("interfaceName", interfaceName);
+
+        createAction(Action.REMOVE_JS_INTERFACE, params);
     }
 
     private void createAction(int actionCode, Map<String, Object> parameterMap) {
@@ -142,7 +163,6 @@ public class ContentShellWebView extends FrameLayout {
                             true, false, new BrowserStartupController.StartupCallback() {
                                 @Override
                                 public void onSuccess() {
-                                    shellManager.launchShell(ShellManager.DEFAULT_SHELL_URL);
                                     browserProcessStarted = true;
 
                                     // After the view is initialized successfully, execute the remaining
@@ -156,7 +176,6 @@ public class ContentShellWebView extends FrameLayout {
 
                                 @Override
                                 public void onFailure() {
-                                    // TODO: handle error
                                 }
                             });
         } catch (ProcessInitException e) {
@@ -164,10 +183,53 @@ public class ContentShellWebView extends FrameLayout {
         }
     }
 
+    public WebViewClient getWebViewClient() {
+        return webViewClient;
+    }
+
+    public void setWebViewClient(WebViewClient webViewClient) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("webViewClient", webViewClient);
+
+        createAction(Action.SET_WEBVIEW_CLIENT, params);
+    }
+
+    private void mapWebViewClientListeners(WebViewClient webViewClient) {
+        WebContents webContents = shellManager.getActiveShell().getWebContents();
+
+        if (webContentsObserver != null) {
+            webContents.removeObserver(webContentsObserver);
+        }
+
+        webContentsObserver = new WebContentsObserver() {
+            @Override
+            public void didStartLoading(String url) {
+                super.didStartLoading(url);
+                webViewClient.onPageStarted(null, url, null);
+            }
+
+            @Override
+            public void didFinishLoad(long frameId, String validatedUrl, boolean isMainFrame) {
+                super.didFinishLoad(frameId, validatedUrl, isMainFrame);
+                webViewClient.onPageFinished(null, validatedUrl);
+            }
+
+            @Override
+            public void didFailLoad(boolean isMainFrame, int errorCode, String description, String failingUrl) {
+                super.didFailLoad(isMainFrame, errorCode, description, failingUrl);
+                webViewClient.onReceivedError(null, errorCode, description, failingUrl);
+            }
+        };
+
+        webContents.addObserver(webContentsObserver);
+    }
+
     private static class Action {
         private static final int LOAD_URL = 1;
         private static final int EVAL_JS = 2;
         private static final int ADD_JS_INTERFACE = 3;
+        private static final int REMOVE_JS_INTERFACE = 4;
+        private static final int SET_WEBVIEW_CLIENT = 5;
 
         private int actionCode;
         private Map<String, Object> parameterMap;

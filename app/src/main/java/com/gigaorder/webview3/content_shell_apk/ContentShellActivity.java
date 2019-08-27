@@ -6,8 +6,6 @@ package com.gigaorder.webview3.content_shell_apk;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.webkit.JavascriptInterface;
-import android.widget.Button;
 
 import com.gigaorder.webview3.R;
 
@@ -41,21 +39,5 @@ public class ContentShellActivity extends Activity {
 
         setContentView(R.layout.content_shell_activity);
         csWebView = findViewById(R.id.web_view_container);
-        csWebView.loadUrl("about:blank");
-
-        // Example for csWebView methods
-        Button button = findViewById(R.id.test);
-        button.setOnClickListener(v -> {
-            Object interfaceObj = new Object() {
-                @JavascriptInterface
-                public int test() {
-                    return Integer.MAX_VALUE;
-                }
-            };
-            String interfaceName = "testJsInterface";
-
-            csWebView.addJavascriptInterface(interfaceObj, interfaceName);
-            csWebView.loadUrl("javascript:testJsInterface.test()");
-        });
     }
 }
