@@ -1,5 +1,6 @@
 package com.gigaorder.webview3.content_shell_apk;
 
+import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.util.AttributeSet;
@@ -26,6 +27,7 @@ import org.chromium.content_public.browser.WebContentsObserver;
 import org.chromium.content_shell.ShellManager;
 import org.chromium.ui.base.ActivityWindowAndroid;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -55,6 +57,14 @@ public class ContentShellWebView extends FrameLayout {
     }
 
     private void initShellManager(Context context) {
+        try {
+            Method method = ApplicationStatus.class.getDeclaredMethod("onStateChange", Activity.class, int.class);
+            method.setAccessible(true);
+            method.invoke(null, context, 1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         ContextUtils.initApplicationContext(context.getApplicationContext());
         PathUtils.setPrivateDataDirectorySuffix("content_shell");
         ApplicationStatus.initialize((Application) context.getApplicationContext());
