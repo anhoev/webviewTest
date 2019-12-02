@@ -39,5 +39,7 @@ public class ContentShellActivity extends Activity {
 
         setContentView(R.layout.content_shell_activity);
         csWebView = findViewById(R.id.web_view_container);
+
+        csWebView.loadUrl("google.com");
     }
 }
