@@ -37,7 +37,7 @@ public class ContentShellActivity extends Activity {
             e.printStackTrace();
         }
 
-        setContentView(R.layout.content_shell_activity);
+        setContentView(R.layout.content_shell_activity1);
         csWebView = findViewById(R.id.web_view_container);
 
         csWebView.loadUrl("google.com");
