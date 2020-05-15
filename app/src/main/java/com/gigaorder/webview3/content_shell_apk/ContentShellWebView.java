@@ -1,35 +1,60 @@
 package com.gigaorder.webview3.content_shell_apk;
 
+import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.opengl.GLException;
+import android.opengl.GLSurfaceView;
+import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.PixelCopy;
+import android.view.SurfaceView;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import com.gigaorder.webview3.R;
 
 import org.chromium.base.ApplicationStatus;
+import org.chromium.base.Callback;
 import org.chromium.base.ContextUtils;
 import org.chromium.base.PathUtils;
 import org.chromium.base.library_loader.LibraryLoader;
 import org.chromium.base.library_loader.LibraryProcessType;
 import org.chromium.base.library_loader.ProcessInitException;
+import org.chromium.components.embedder_support.view.ContentViewRenderView;
+import org.chromium.content.browser.RenderWidgetHostViewImpl;
 import org.chromium.content_public.browser.BrowserStartupController;
 import org.chromium.content_public.browser.JavascriptInjector;
+import org.chromium.content_public.browser.RenderWidgetHostView;
 import org.chromium.content_public.browser.WebContents;
 import org.chromium.content_public.browser.WebContentsObserver;
+import org.chromium.content_shell.Shell;
 import org.chromium.content_shell.ShellManager;
 import org.chromium.ui.base.ActivityWindowAndroid;
 
+import java.lang.reflect.Field;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+
+import javax.microedition.khronos.egl.EGL10;
+import javax.microedition.khronos.egl.EGLContext;
+import javax.microedition.khronos.opengles.GL10;
+
+import java9.util.concurrent.CompletableFuture;
 
 
 public class ContentShellWebView extends FrameLayout {
@@ -76,12 +101,92 @@ public class ContentShellWebView extends FrameLayout {
         shellManager.setWindow(new ActivityWindowAndroid(context, false));
     }
 
+
+    public CompletableFuture<Bitmap> writeContentBitmap() {
+        CompletableFuture<Bitmap> future = new CompletableFuture<>();
+        //future.completeOnTimeout(null, 50, TimeUnit.MILLISECONDS);
+        RenderWidgetHostView v = shellManager.getActiveShell().getWebContents().getRenderWidgetHostView();
+        new Thread(() -> {
+            v.writeContentBitmapAsync(getWidth(), getHeight(), bitmap -> {
+                future.complete(bitmap);
+            });
+        }).start();
+
+        return future;
+    }
+
+    ;
+
+    public void writeContentBitmapAsync(int width, int height, Callback<Bitmap> cb) {
+        ((Activity) getContext()).runOnUiThread(() -> {
+            RenderWidgetHostView v = shellManager.getActiveShell().getWebContents().getRenderWidgetHostView();
+            v.writeContentBitmapAsync(width, height, cb);
+        });
+    }
+
     public void handleAction(Action action) {
         Map<String, Object> parameterMap = action.getParameterMap();
 
         switch (action.getActionCode()) {
             case Action.LOAD_URL:
                 shellManager.getActiveShell().loadUrl((String) parameterMap.get("url"));
+                /*postDelayed(() -> {
+                    try {
+                        Bitmap b = writeContentBitmap().get();
+                        int a = 5;
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                }, 4000);*/
+
+                postDelayed(() -> {
+                    Shell a = shellManager.getActiveShell();
+                    Field field = null;
+                    try {
+                        field = a.getClass().getDeclaredField("mContentViewRenderView");
+                        field.setAccessible(true);
+                        ContentViewRenderView v = (ContentViewRenderView) field.get(a);
+                        SurfaceView s = v.getSurfaceView();
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            final Bitmap bitmap = Bitmap.createBitmap(s.getWidth(), s.getHeight(),
+                                    Bitmap.Config.ARGB_8888);
+                            // Create a handler thread to offload the processing of the image.
+                            final HandlerThread handlerThread = new HandlerThread("PixelCopier");
+                            handlerThread.start();
+                            // Make the request to copy.
+                            PixelCopy.request(s, bitmap, (copyResult) -> {
+                                bitmap.getClass();
+                                if (copyResult == PixelCopy.SUCCESS) {
+                                    int m = 10;
+                                }
+                                handlerThread.quitSafely();
+                            }, new Handler(handlerThread.getLooper()));
+                        }
+
+
+
+                    } catch (Exception e) {
+                    }
+
+                    new Thread(() -> {
+                        /*a.writeContentBitmapToDiskAsync(getWidth(), getHeight(), getContext().getApplicationInfo().dataDir, path -> {
+                            int b = 5;
+                        });*/
+                        int sleep = 1000 / 2;
+                        while (true) {
+                            try {
+                                Thread.sleep(sleep);
+                            } catch (InterruptedException e) {
+                            }
+                            writeContentBitmapAsync(512, 512, bitmap -> {
+                                int b = 5;
+                            });
+                        }
+
+                    }).start();
+                }, 4000);
                 break;
             case Action.EVAL_JS:
                 String script = (String) parameterMap.get("script");
